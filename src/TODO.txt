@@ -1,0 +1,3 @@
+- running some kind of programs (vlc in asciiart) they are not closed on kill of client process
+- CTRL-R
+ 

@@ -1,0 +1,7 @@
+Import('env')
+
+source_files = Glob('*.cpp', '*.h')
+
+source_objects = env.Object(source_files)
+
+Return('source_objects')

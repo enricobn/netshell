@@ -1,0 +1,456 @@
+<html>
+<head>
+
+<script src="jquery-1.11.0.min.js" type="text/javascript"></script>
+
+<!-- for jquery.fileDownload -->
+<script src="jquery-ui-1.10.4.min.js" type="text/javascript"></script>
+<link rel="stylesheet" type="text/css" href="jquery-ui.css"/>
+
+<!-- https://github.com/johnculviner/jquery.fileDownload/ -->
+<script src="jquery.fileDownload.js" type="text/javascript"></script>
+
+<script src="CellAttributes.js" type="text/javascript"></script>
+
+<script src="Screen.js" type="text/javascript"></script>
+
+<script src="Terminal.js" type="text/javascript"></script>
+
+<script>
+var ERROR = 0;
+var WARN = 1;
+var INFO = 2;
+var DEBUG = 3;
+var log_level = WARN; 
+
+function is_log(level) {
+    return log_level >= level;
+};
+
+function log(text, level) {
+    if (log_level >= level) {
+        switch(level) {
+        case ERROR:
+          console.error(text);
+          break;
+        case WARN:
+          console.warn(text);
+          break;
+        case INFO:
+          console.info(text);
+          break;
+        case DEBUG:
+          console.debug(text);
+          break;
+        default:
+          return;
+        }
+    }
+};
+
+//var terminal_buffer = new Array();
+
+var disable_events = true;
+
+function send_keydown(char_key,ctrl) {
+    var e = jQuery.Event( "keydown", { keyCode: char_key.charCodeAt(0), which: char_key.charCodeAt(0), ctrlKey: true} );
+     $(document).trigger( e );  
+}
+
+// don't call it screen! It's a window property (but before some browser updates, it worked!)
+var scr;
+var ter;
+var ws;
+var user;
+
+$(document).ready(function(){
+    scr = new Screen('screenCanvas');
+    ter = new Terminal(scr);
+    
+    var terminal = $("#oldTerminal");
+    terminal.focus();
+
+    ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + window.location.pathname + "/terminal");
+
+    ws.onerror = function(error) {
+        window.alert("Web socket error:" + error);
+    };
+    
+    ws.onclose = function() {
+        window.alert("Web socket closed!");
+    };
+
+    window.onbeforeunload = function() {
+        ws.onclose = function () {}; // disable onclose handler first
+        ws.close()
+    };
+
+    $('#screenCanvas').click(function() {
+        $('#fake-text').focus();
+    });
+    
+    $('input#user').focus();
+    $('input#user').change(function(evt) {
+        // when changing focus to the fake-text (inside this function), I get another change event, 
+        // so I look if the user has already been set
+        if (!user) {
+            disable_events = false;
+            user = $('input#user').val();
+            var response = '\033_' + '{"op":"user", "user":"' + user + '"}' + '\033\\'; 
+            ws.send(response);
+            $('input#user').prop('disabled', true);
+            $('textarea#fake-text').focus();
+        }
+    });
+    
+    $(document).bind('keypress', function (evt){
+        if (disable_events) {
+            return;
+        }
+        evt.preventDefault();
+        evt.stopPropagation();
+        var c = String.fromCharCode(evt.which);
+        ws.send(c);
+  	});
+  	
+  	$(document).bind('keydown', function (evt) {
+        if (disable_events) {
+            return;
+  	    }
+        evt.stopPropagation();
+        if (evt.which == 9      // tab
+            || evt.which == 27  // ESC
+            || evt.which == 8   // backspace
+        )
+        {
+            var c = String.fromCharCode(evt.which);
+            ws.send(c);
+            evt.preventDefault();
+        // UP
+        } else if (evt.which == 38) {
+            if (ter.app_mode) {
+                ws.send(String.fromCharCode(27) + 'OA');
+            } else {
+                ws.send(String.fromCharCode(27) + '[A');
+            }
+            evt.preventDefault();
+        // DOWN
+        } else if (evt.which == 40) {
+            if (ter.app_mode) {
+                ws.send(String.fromCharCode(27) + 'OB');
+            } else {
+                ws.send(String.fromCharCode(27) + '[B');
+            }
+            evt.preventDefault();
+        // LEFT
+        } else if (evt.which == 37) {
+            if (evt.ctrlKey) {
+                ws.send(String.fromCharCode(27) + '[1;5D');
+            } else {
+                if (ter.app_mode) {
+                    ws.send(String.fromCharCode(27) + 'OD');
+                } else {
+                    ws.send(String.fromCharCode(27) + '[D');
+                }
+            }
+            evt.preventDefault();
+        // RIGHT
+        } else if (evt.which == 39) {
+            if (evt.ctrlKey) {
+                ws.send(String.fromCharCode(27) + '[1;5C');
+            } else {
+                if (ter.app_mode) {
+                    ws.send(String.fromCharCode(27) + 'OC');
+                } else {
+                    ws.send(String.fromCharCode(27) + '[C');
+                }
+            }
+            evt.preventDefault();
+        // HOME
+        } else if (evt.which == 36) {
+            if (ter.app_mode) {
+                ws.send(String.fromCharCode(27) + 'OH');
+            } else {
+                ws.send(String.fromCharCode(27) + '[H');
+            }
+            evt.preventDefault();
+        // END
+        } else if (evt.which == 35) {
+            if (ter.app_mode) {
+                ws.send(String.fromCharCode(27) + 'OF');
+            } else {
+                ws.send(String.fromCharCode(27) + '[F');
+            }
+            evt.preventDefault();
+        // Page up
+        } else if (evt.which == 33) {
+            if (evt.shiftKey) {
+                ter.scroll_back_page_up();
+            } else {
+                ws.send(String.fromCharCode(27) + '[5~');
+            }
+            evt.preventDefault();
+        // Page down
+        } else if (evt.which == 34) {
+            if (evt.shiftKey) {
+                ter.scroll_back_page_down();
+            } else {
+                ws.send(String.fromCharCode(27) + '[6~');
+            }
+            evt.preventDefault();
+        // Canc
+        } else if (evt.which == 46) {
+            ws.send(String.fromCharCode(27) + '[3~');
+            evt.preventDefault();
+        } else if (evt.which == 13) {
+//            if (ter.icrnl) {
+//                ws.send(String.fromCharCode(10));
+//            } else {
+                ws.send(String.fromCharCode(13));
+//            }
+            evt.preventDefault();
+        // Ctrl-c Ctrl-C
+        } else if (evt.ctrlKey && (evt.which == 67 || evt.which == 99)) {
+            ws.send(String.fromCharCode(3));
+            evt.preventDefault();
+        // Ctrl-d Ctrl-D
+        } else if (evt.ctrlKey && (evt.which == 68 || evt.which == 100)) {
+            ws.send(String.fromCharCode(4));
+            evt.preventDefault();
+        } else if (is_log(DEBUG)) {
+            log('keydown:' + evt.which, DEBUG);
+        }
+    });
+    
+    //FF doesn't recognize mousewheel
+    var mousewheelevt=(/Firefox/i.test(navigator.userAgent))? "mousewheel DOMMouseScroll MozMousePixelScroll" : "mousewheel";
+        
+    $(document).bind('mousewheel DOMMouseScroll MozMousePixelScroll', function (evt) {
+        if (disable_events) {
+            return;
+        }
+        var delta;
+        if (evt.originalEvent.detail) {
+            delta = -evt.originalEvent.detail;
+        } else {
+            delta = evt.originalEvent.wheelDelta;
+        }
+        if (delta >= 0) {
+            // TODO is the right check?
+            if (ter.app_mode) {
+                for (var i = 0; i < 5; i++) {
+                    ws.send(String.fromCharCode(27) + 'OA');
+                }
+            } else {
+                ter.scroll_back_up(5);
+            }
+        } else {
+            // TODO is the right check?
+            if (ter.app_mode) {
+                for (var i = 0; i < 5; i++) {
+                    ws.send(String.fromCharCode(27) + 'OB');
+                }
+            } else {
+                ter.scroll_back_down(5);
+            }
+        }
+        evt.preventDefault();
+    });
+    
+    var canvasOffset = $('#screenCanvas').offset();
+    var offsetX = canvasOffset.left;
+    var offsetY = canvasOffset.top;
+
+    // {x,y}
+    var mouse_start;
+
+    $(document).bind('mousedown', function(evt) {
+        if (disable_events) {
+            return;
+        }
+        mouse_start = {x: parseInt(evt.clientX - offsetX), y: parseInt(evt.clientY - offsetY)};
+        scr.set_selection( undefined );
+    });
+
+    $(document).bind('mouseup', function(evt) {
+        if (disable_events) {
+            return;
+        }
+        var txt = scr.get_selected_text();
+        if (txt && txt.length > 0) {
+            show_copy(txt);
+        }
+        mouse_start = undefined;
+    });
+    
+/*    $('#fake-text').bind('input oninput', function(evt) {
+        var text = $('textarea#fake-text').val();
+        ws.send(text);
+        $('textarea#fake-text').val('');
+    });
+*/
+    $(document).bind('mousemove', function(evt) {
+        if (disable_events) {
+            return;
+        }
+        if (mouse_start) {
+            var mouse_end = {x: parseInt(evt.clientX - offsetX), y: parseInt(evt.clientY - offsetY)};
+            
+            var from = scr.get_coords_at_pixel(mouse_start.x, mouse_start.y);
+            var to = scr.get_coords_at_pixel(mouse_end.x, mouse_end.y)
+            
+            if (from.x < to.x || from.y < to.y) {
+                scr.set_selection( {from: from, to: to});
+            } else {
+                scr.set_selection( {from: to, to: from});
+            }
+        }
+    });
+  	
+    ws.onmessage = function (evt) 
+    { 
+        //terminal_buffer.push(evt.data);        
+        ter.add(evt.data);
+    };
+    
+    var fontHeight = getFontHeight('Courier New', '16px', 'Mg');
+    log('height=' + fontHeight.height + ', ascent=' + fontHeight.ascent + ', descent=' + fontHeight.descent, INFO);
+    
+    // 60 frames per second
+    setInterval(function(){updatescr()}, Math.round(1000 / 60));
+});
+
+function updatescr() {
+    scr.update();
+};
+
+/*
+function update_terminal() {
+    if (terminal_buffer.length > 0) {
+        ter.add(terminal_buffer.shift());
+    }
+};
+*/
+
+function string_array_to_string(a) {
+    var s = '';
+    if (a) {
+        for (var i=0; i < a.length; i++) {
+            if (s.length > 0) {
+                s += ';';
+            }
+            s += a[i];
+        }
+    }
+    return s;
+};
+
+/*
+ * from http://stackoverflow.com/questions/1134586/how-can-you-find-the-height-of-text-on-an-html-canvas 
+ */
+function getFontHeight(fontFamily, size, t) {
+    var text = $('<span>' + t + '</span>').css({ 'font-family': fontFamily, 'font-size' : size});
+    var block = $('<div style="display: inline-block; width: 1px; height: 0px;"></div>');
+
+    var div = $('<div></div>');
+    div.append(text, block);
+
+    var body = $('body');
+    body.append(div);
+
+    try {
+        var result = {};
+
+        block.css({ verticalAlign: 'baseline' });
+        result.ascent = block.offset().top - text.offset().top;
+
+        block.css({ verticalAlign: 'bottom' });
+        result.height = block.offset().top - text.offset().top;
+
+        result.descent = result.height - result.ascent;
+
+    } finally {
+        div.remove();
+    }
+    return result;
+};
+
+$(function() {
+    $( "#paste-button" )
+      .button()
+      .click(function( event ) {
+          disable_events = true;
+          $( '#paste-dialog' ).html('<textarea id="paste-dialog-text" cols="40" rows="10"></textarea>');
+          $( '#paste-dialog' ).dialog({
+              modal: true,
+              width: 500,
+              height: 400,
+              dialogClass: 'dlg-no-close',
+              buttons: {
+                Ok: function() {
+                    var text = $('textarea#paste-dialog-text').val();
+                    ws.send(text);
+                    disable_events = false;
+                    $( 'textarea#fake-text' ).focus();
+                    $( this ).dialog( 'close' );
+                },
+                Cancel: function() {
+                    disable_events = false;
+                    $( 'textarea#fake-text' ).focus();
+                    $( this ).dialog( 'close' );
+                }
+              }
+        });
+      });
+  });
+
+function show_copy(txt) {
+      disable_events = true;
+      $( '#copy-dialog' ).html('<textarea id="copy-dialog-text" cols="40" rows="10"></textarea>');
+      $( '#copy-dialog' ).dialog({
+          open: function( event, ui ) {
+            $( 'textarea#copy-dialog-text' ).val(txt);
+            $( 'textarea#copy-dialog-text' ).focus();
+            window.setTimeout(function() {
+                $( 'textarea#copy-dialog-text' ).select();
+            }, 1);
+          },
+          modal: true,
+          width: 500,
+          height: 400,
+          dialogClass: 'dlg-no-close',
+          buttons: {
+            Ok: function() {
+              disable_events = false;
+              $( 'textarea#fake-text' ).focus();
+              $( this ).dialog( 'close' );
+            }
+          }
+    });
+}
+
+</script>
+
+<style>
+    .dlg-no-close .ui-dialog-titlebar-close {
+        display: none;
+    }
+</style>
+
+</head>
+<body bgcolor="#1E0F30" color="white">
+    <!-- dummy textarea for showing mobile keyboard -->
+    <font color="white"><b>user: </b></font><input type="text" name="user" id="user" maxlength="70"/>
+    <div style="overflow: hidden; height: 0">
+        <textarea id="fake-text"></textarea><!-- height="10" style="color:#1E0F30;bgcolor=#1E0F30"-->
+    </div>
+    <canvas id="screenCanvas" width="1024" height="600" style="border:1px solid #d3d3d3;">
+        Your browser does not support the HTML5 canvas tag.</canvas>
+    <br/>
+    <button id="paste-button">Paste</button>
+    <div id="copy-dialog" title="Press Ctrl-C to copy, then OK">
+    </div>
+    <div id="paste-dialog" title="Press Ctrl-V to paste, then OK">
+    </div>
+</body>
+</html>
