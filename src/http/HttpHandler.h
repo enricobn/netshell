@@ -37,21 +37,21 @@ public:
 
 	/**
 	 * returns the path obtained from the application's root. Examples:
-	 * application: netshell
+	 * application: wshell
 	 * handler: terminal
 	 * path: download
-	 * returns: /netshell/terminal/download
+	 * returns: /wshell/terminal/download
 	 *
-	 * application: netshell
+	 * application: wshell
 	 * handler: *
 	 * path: download
-	 * returns: /netshell/download
+	 * returns: /wshell/download
 	 */
 	std::string get_absolute_path(std::string path);
 
 	/**
 	 * the path relative to the application's root. Example:
-	 * application: netshell
+	 * application: wshell
 	 * handler: terminal
 	 * returns: terminal
 	 */

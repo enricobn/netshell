@@ -14,10 +14,10 @@
 #include "service/ServiceServer.h"
 
 void print_help() {
-	std::cout 	<< "Usage: netshell start" << std::endl
-			 	<< "                (to start server)" << std::endl
-			 	<< "       netshell download file" << std::endl
-			 	<< "                (to download a file)" << std::endl
+	std::cout 	<< "Usage: wshell start" << std::endl
+			 	<< "              (to start server)" << std::endl
+			 	<< "       wshell download file" << std::endl
+			 	<< "              (to download a file)" << std::endl
 				;
 }
 
@@ -41,8 +41,8 @@ void start_server() {
 
 	HttpServer server = HttpServer("5000");
 
-	HttpApplication* netshell = server.create_application("netshell");
-	netshell->add("terminal", new HttpTerminal());
+	HttpApplication* wshell = server.create_application("wshell");
+	wshell->add("terminal", new HttpTerminal());
 
 	server.start();
 }

@@ -1,3 +1,9 @@
+Description
+============
+wshell is a 
+
+BEWARE: it's an experiment, it's not secure!!!
+
 Compile
 ========
 
@@ -21,10 +27,13 @@ Running
 
 Requirements
 -------------
-ssh and sshd started on server
+linux (I have tested it only on Ubuntu 12.04 64 bit), ssh and sshd started on server
 
 Run
 -----
 for now (I hope to fix it) you must start it from a terminal, otherwise TERM is not set and some commands do not work.
-the run:
-build/netshell start 
+to run the server:
+build/wshell start
+
+then you can open http://localhost:5000
+follow link to wshell

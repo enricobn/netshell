@@ -22,4 +22,4 @@ for package in subpackages:
 env.Append( CPPFLAGS=['-std=c++0x', '-pthread', '-lssl', '-lcrypto', '-Wall', '-g'] )
 
 # Tell SCons the program to build
-env.Program('build/netshell', source_files, LIBS = libraries, LIBPATH = library_paths)
+env.Program('build/wshell', source_files, LIBS = libraries, LIBPATH = library_paths)
