@@ -1,6 +1,6 @@
 Description
 ============
-wshell is a 
+wshell is a server wich let you open a shell from a web browser.
 
 BEWARE: it's an experiment, it's not secure!!!
 
